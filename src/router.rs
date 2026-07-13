@@ -41,13 +41,13 @@ impl Hub {
     ///   excluded from delivery.
     /// - `PUT /clients/{client}/tags/{tag}` &mdash; add a tag.
     /// - `DELETE /clients/{client}/tags/{tag}` &mdash; remove a tag.
-    /// - `GET /healthz` &mdash; liveness probe.
+    /// - `GET /health` &mdash; liveness probe.
     pub fn router(&self) -> Router {
         Router::new()
             .route("/sse", get(sse))
             .route("/send", post(send))
             .route("/clients/{client}/tags/{tag}", put(add).delete(remove))
-            .route("/healthz", get(async || StatusCode::OK))
+            .route("/health", get(async || StatusCode::OK))
             .layer(CorsLayer::permissive())
             .with_state(self.clone())
     }
