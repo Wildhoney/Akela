@@ -9,7 +9,7 @@
 
 A standalone Server-Sent Events hub with tag-based fan-out, distributed over Redis pub/sub.
 
-Akela is **infrastructure, not a library** &mdash; think nginx rather than a crate you embed. It happens to be written in Rust, but what you deploy is an interface: pull the image, mount a YAML config, point it at Redis, and speak its HTTP protocol from your application. The first-class client is [March Hare](https://github.com/Wildhoney/MarchHare)'s **omnicast** distribution, which drives every route below for you &mdash; connection lifecycle, tag mutation, sender exclusion, and payload validation included.
+Akela is **infrastructure, not a library** &mdash; think nginx rather than a crate you embed. It happens to be written in Rust, but what you deploy is an interface: pull the image, mount a YAML config, point it at Redis, and speak its HTTP protocol from any language that can open an `EventSource` and issue a `POST`.
 
 Any number of Akela instances behind a load balancer form one logical hub: every event is published to a Redis channel and each instance delivers it to its own connected clients. Tag mutations travel over the same channel, so they work no matter which instance owns the client's connection.
 
@@ -39,44 +39,9 @@ channel: akela:events
 
 Give each independent hub its own `channel` to share one Redis deployment between several applications. Scale out by running as many instances as you like against the same Redis &mdash; clients can connect to any of them.
 
-## The client: March Hare
-
-Applications never call Akela's routes by hand. Declare omnicast actions, point the App at the endpoint, and dispatch &mdash; March Hare owns the connection and the protocol:
-
-```ts
-import { Action, App, Audience, Distribution } from "march-hare";
-import { z } from "zod";
-
-export namespace Omnicast {
-  export class Room {
-    static Joined = Action(
-      "Room.Joined",
-      Distribution.Omnicast(z.object({ member: z.string() })),
-    );
-  }
-}
-
-export const app = App({
-  sse: { url: "http://localhost:8080", actions: Omnicast },
-});
-
-// In a handler — tags and dispatches, all through March Hare:
-actions.useAction(Actions.JoinRoom, async (context, room) => {
-  await context.actions.tag.add(`room-${room.id}`);
-
-  await context.actions.dispatch(
-    Actions.Omnicast.Room.Joined,
-    Audience.Private([`room-${room.id}`]),
-    { member: "Adam" },
-  );
-});
-```
-
-See the [March Hare SSE recipe](https://github.com/Wildhoney/MarchHare/blob/main/recipes/sse.md) for audiences, channels, schema validation, and race semantics.
-
 ## The protocol
 
-For debugging, or for writing a client in another language, the interface is four routes:
+The interface is four routes; a client library wraps them by opening the stream, remembering the `connected` id, attributing its sends with it, and mutating tags as its subscriptions change:
 
 | Route                          | Method   | Purpose                                                       |
 | ------------------------------ | -------- | ------------------------------------------------------------- |
