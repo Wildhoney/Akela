@@ -9,8 +9,8 @@ services:
 
   akela:
     build: .
-    environment:
-      REDIS_URL: redis://redis:6379
+    volumes:
+      - ./akela.example.yaml:/etc/akela/akela.yaml:ro
     ports:
       - "8080:8080"
     depends_on:

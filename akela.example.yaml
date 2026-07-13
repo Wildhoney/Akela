@@ -1,0 +1,15 @@
+# Akela configuration.
+#
+# Mount this file at /etc/akela/akela.yaml (or point AKELA_CONFIG at it).
+# Every key is optional; environment variables (PORT, REDIS_URL, CHANNEL)
+# override the file, and built-in defaults cover anything left unset.
+
+# Port the HTTP interface listens on.
+port: 8080
+
+# Redis connection URL — the fan-out backbone shared by every instance.
+redis: redis://redis:6379
+
+# Redis pub/sub channel. Give each independent hub its own channel to
+# share one Redis deployment between several applications.
+channel: akela:events
